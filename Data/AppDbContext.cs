@@ -12,6 +12,6 @@ namespace DatingAppServer.Data
 
         }
 
-        public DbSet<AppUser> Users { get; set; } = default;
+        public DbSet<AppUser> Users { get; set; }
     }
 }
