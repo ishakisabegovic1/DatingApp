@@ -1,4 +1,5 @@
-﻿using DatingAppServer.Data;
+﻿using AutoMapper;
+using DatingAppServer.Data;
 using DatingAppServer.DTos;
 using DatingAppServer.Entities;
 using DatingAppServer.Interfaces;
@@ -14,11 +15,13 @@ namespace DatingAppServer.Controllers
     {
         private readonly AppDbContext _context;
         private readonly ITokenService _tokenService;
+        private readonly IMapper _mapper;
 
-        public AccountController(AppDbContext context, ITokenService tokenService)
+        public AccountController(AppDbContext context, ITokenService tokenService, IMapper mapper)
         {
             _context = context;
             _tokenService = tokenService;
+            _mapper = mapper;
         }
 
         [HttpPost("register")]
@@ -26,14 +29,15 @@ namespace DatingAppServer.Controllers
         {
             if (UserExists(registerDto.Username)) return BadRequest("Username is taken");
 
+            var user = _mapper.Map<AppUser>(registerDto);
+
             using var hmac = new HMACSHA512();
 
-            var user = new AppUser
-            {
-                userName = registerDto.Username,
-                PaswwordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(registerDto.Password)),
-                PaswwordSalt=hmac.Key
-            };
+
+            user.userName = registerDto.Username;
+            user.PaswwordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(registerDto.Password));
+            user.PaswwordSalt = hmac.Key;
+            
 
             _context.Users.Add(user);
 
@@ -42,7 +46,9 @@ namespace DatingAppServer.Controllers
             return new UserDto
             {
                 Username = user.userName,
-                Token = _tokenService.CreateToken(user)
+                Token = _tokenService.CreateToken(user),
+                KnownAs = user.KnownAs,
+                Gender = user.Gender
             };
         }
 
@@ -64,7 +70,8 @@ namespace DatingAppServer.Controllers
             return new UserDto
             {
                 Username = user.userName,
-                Token = _tokenService.CreateToken(user)
+                Token = _tokenService.CreateToken(user),
+                KnownAs = user.KnownAs
             };
         }
 
