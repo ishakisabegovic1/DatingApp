@@ -1,17 +1,23 @@
-﻿using DatingAppServer.DTos;
+﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
+using DatingAppServer.DTos;
 using DatingAppServer.Entities;
+using DatingAppServer.Helpers;
 using DatingAppServer.Interfaces;
-using System.Fabric.Query;
+
+using Microsoft.EntityFrameworkCore;
 
 namespace DatingAppServer.Data
 {
     public class MessageRepository : IMessageRepository
     {
         private readonly AppDbContext _context;
+        private readonly IMapper _mapper;
 
-        public MessageRepository(AppDbContext context)
+        public MessageRepository(AppDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
         public void AddMessage(Message message)
@@ -26,17 +32,53 @@ namespace DatingAppServer.Data
 
         public async Task<Message> GetMessage(int id)
         {
-            return await _context.Messages.FindAsync(id);
+            return await _context.Messages
+                .Include(u => u.Sender)
+                .Include(u => u.Recipient)
+                .SingleOrDefaultAsync(x => x.Id == id);
         }
 
-        public Task<PagedList<MessageDto>> GetMessageForUser()
+        public async Task<PagedList<MessageDto>> GetMessageForUser(MessageParams messageParams)
         {
-            throw new NotImplementedException();
+            var query = _context.Messages
+                .OrderByDescending(m => m.MessageSent)
+                .AsQueryable();
+
+            query = messageParams.Container switch
+            {
+                "Inbox" => query.Where(u => u.Recipient.userName == messageParams.Username && u.RecipientDeleted == false),
+                "Outbox" => query.Where(u => u.Sender.userName == messageParams.Username && u.SenderDeleted == false),
+                _ => query.Where(u => u.Recipient.userName == messageParams.Username && u.RecipientDeleted==false && u.DateRead == null)
+            };
+             
+            var messages = query.ProjectTo<MessageDto>(_mapper.ConfigurationProvider);
+
+            return await PagedList<MessageDto>.CreateAsync(messages, messageParams.PageNumber, messageParams.PageSize);
+
         }
 
-        public Task<IEnumerable<MessageDto>> GetMessageThread(int currentUserId, int recipientId)
+        public async Task<IEnumerable<MessageDto>> GetMessageThread(string currentUsername, string recipientUsername)
         {
-            throw new NotImplementedException();
+            var messages = await _context.Messages
+                .Include(u=>u.Sender).ThenInclude(prop=>prop.Photos)
+                .Include(u => u.Recipient).ThenInclude(prop => prop.Photos)
+                .Where(m => m.Recipient.userName == currentUsername && m.RecipientDeleted == false
+                && m.Sender.userName == recipientUsername 
+                || m.Recipient.userName == recipientUsername 
+                && m.Sender.userName == currentUsername && m.SenderDeleted == false)
+                .OrderBy(m => m.MessageSent)
+                .ToListAsync();
+
+            var unreadMessages = messages.Where(m => m.DateRead == null && m.Recipient.userName == currentUsername).ToList();
+            if (unreadMessages.Any())
+            {
+                foreach(var message in unreadMessages)
+                {
+                    message.DateRead = DateTime.Now;
+                }
+                await _context.SaveChangesAsync();
+            }
+            return _mapper.Map<IEnumerable<MessageDto>>(messages);
         }
 
         public async Task<bool> SaveAllAsync()
