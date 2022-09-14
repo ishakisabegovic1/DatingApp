@@ -1,18 +1,19 @@
 ﻿using DatingAppServer.Extensions;
+using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
 
 namespace DatingAppServer.Entities
 {
 
-    public class AppUser
+    public class AppUser : IdentityUser<int>
     {
 
-        public int Id { get; set; } = default;
-        public string userName { get; set; } = default;
+        //public int Id { get; set; } = default;
+      // public string UserName { get; set; } = default;
 
-        public byte[] PaswwordHash { get; set; } = default;
+        //public byte[] PaswwordHash { get; set; } = default;
 
-        public byte[] PaswwordSalt { get; set; } = default;
+        //public byte[] PaswwordSalt { get; set; } = default;
 
         public DateTime DateOfBirth { get; set; }
         public string KnownAs { get; set; }
@@ -31,6 +32,8 @@ namespace DatingAppServer.Entities
 
         public ICollection<Message> MessagesSent { get; set; }
         public ICollection<Message> MessagesRecieved { get; set; }
+
+        public ICollection<AppUserRole> UserRoles { get; set; }
 
     }
 }
