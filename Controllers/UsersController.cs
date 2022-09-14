@@ -26,13 +26,13 @@ namespace DatingAppServer.Controllers
             _mapper = mapper;
             _photoService = photoService;
         }
-
+        
         [HttpGet]
       
         public async Task<ActionResult<IEnumerable<MemberDto>>> GetUsers([FromQuery]UserParams userParams)
         {
             var user = await _userRepository.GetUserByUsernameAsync(User.GetUsername());
-            userParams.CurrentUsername = user.userName;
+            userParams.CurrentUsername = user.UserName;
 
             if (string.IsNullOrEmpty(userParams.Gender))
             {
@@ -46,7 +46,7 @@ namespace DatingAppServer.Controllers
 
             return Ok(users);        
         }
-
+       
         [HttpGet("{username}", Name = "GetUser")]
         public async Task<ActionResult<MemberDto>> GetUser(string username)
         {
@@ -89,7 +89,7 @@ namespace DatingAppServer.Controllers
             if (await _userRepository.SaveAllAsync())
             {
 
-                 return CreatedAtRoute("GetUser", new {username = user.userName}, _mapper.Map<PhotoDto>(photo));
+                 return CreatedAtRoute("GetUser", new {username = user.UserName}, _mapper.Map<PhotoDto>(photo));
                 
             }
 

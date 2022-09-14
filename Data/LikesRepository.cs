@@ -22,7 +22,7 @@ namespace DatingAppServer.Data
 
         public async Task<IEnumerable<LikeDto>> GetUserLikes(string predicate, int userId)
         {
-            var users = _context.Users.OrderBy(u => u.userName).AsQueryable();
+            var users = _context.Users.OrderBy(u => u.UserName).AsQueryable();
             var likes = _context.Likes.AsQueryable();
 
             if(predicate == "liked")
@@ -39,7 +39,7 @@ namespace DatingAppServer.Data
 
             return await users.Select(user => new LikeDto
             {
-                Username = user.userName,
+                Username = user.UserName,
                 KnownAs = user.KnownAs,
                 Age = user.DateOfBirth.CalculateAge(),
                 PhotoUrl = user.Photos.FirstOrDefault(p=>p.IsMain).Url,
